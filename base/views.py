@@ -10,6 +10,9 @@ from .serializers import ProductSerializer, UserSerializer, UserSerializerWithTo
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from django.contrib.auth.hashers import make_password
+from rest_framework import status
+
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -26,49 +29,48 @@ class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
 
-@api_view(['GET'])
-def getRoutes(request):
-    routes = [
-        'api/products/',
-        'api/products/create',
+@api_view(['POST'])
+def registerUser(request):
+    data = request.data
 
-        'api/products/upload',
+    try:
+        user = User.objects.create(
+            first_name=data['name'],
+            username=data['email'],
+            email=data['email'],
+            password=make_password(data['password']),
+        )
+        serializer = UserSerializerWithToken(user, many=False)
+        return Response(serializer.data)
+    except:
+        message = {'detail': 'Użytkownik o tym adresie email już istnieje.'}
+        return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-        'api/products/<id>/reviews',
 
-        'api/products/top',
-        'api/products/<id>',
-
-        'api/products/delete/<id>',
-        'api/products/<update>/<id>',
-    ]
-    return Response(routes)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@ api_view(['GET'])
+@ permission_classes([IsAuthenticated])
 def getUserProfile(request):
     user = request.user
     serializer = UserSerializer(user, many=False)
     return Response(serializer.data)
 
 
-@api_view(['GET'])
-@permission_classes([IsAdminUser])
+@ api_view(['GET'])
+@ permission_classes([IsAdminUser])
 def getUsers(request):
     users = User.objects.all()
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
 
 
-@api_view(['GET'])
+@ api_view(['GET'])
 def getProducts(request):
     products = Product.objects.all()
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data)
 
 
-@api_view(['GET'])
+@ api_view(['GET'])
 def getProduct(request, pk):
     product = Product.objects.get(_id=pk)
     serializer = ProductSerializer(product, many=False)
